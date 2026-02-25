@@ -1,0 +1,5 @@
+{
+  "name": "Subscription Tracker",
+  "description": "A full-stack subscription tracking dashboard using React, Express, and Prisma.",
+  "requestFramePermissions": []
+}
