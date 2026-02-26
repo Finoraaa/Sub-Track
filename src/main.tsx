@@ -57,7 +57,11 @@ if (!PUBLISHABLE_KEY || !isValidPublishableKey(PUBLISHABLE_KEY)) {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <ErrorBoundary>
-        <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+        <ClerkProvider 
+          publishableKey={PUBLISHABLE_KEY}
+          afterSignInUrl="/"
+          afterSignUpUrl="/"
+        >
           <BrowserRouter>
             <App />
           </BrowserRouter>

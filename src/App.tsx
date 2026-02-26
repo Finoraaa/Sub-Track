@@ -247,6 +247,7 @@ export default function App() {
                     <Route path="/limits" element={<Limits subscriptions={subscriptions} />} />
                     <Route path="/help" element={<Help />} />
                     <Route path="/logout" element={<Logout />} />
+                    {/* Catch all within SignedIn to redirect to Dashboard */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </main>
@@ -280,6 +281,7 @@ export default function App() {
               </div>
             </SignedIn>
             <SignedOut>
+              {/* If signed out and trying to access any protected route, redirect to sign-in */}
               <Navigate to="/sign-in" replace />
             </SignedOut>
           </>

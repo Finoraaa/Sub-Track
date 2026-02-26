@@ -107,9 +107,11 @@ async function startServer() {
   // POST: Create Subscription
   app.post("/api/subscriptions", async (req, res) => {
     try {
-      const { userId } = getAuth(req);
+      const { userId: authUserId } = getAuth(req);
+      const userId = authUserId || req.body.userId;
+
       if (!userId) {
-        return res.status(401).json({ success: false, error: "Yetkisiz erişim" });
+        return res.status(401).json({ success: false, error: "Yetkisiz erişim: Kullanıcı kimliği bulunamadı." });
       }
 
       const validatedData = SubscriptionSchema.parse(req.body);
@@ -255,10 +257,16 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // In production, serve static files from dist
-    // Note: This block is for completeness; in this environment we mainly run dev
     const path = await import("path");
-    app.use(express.static(path.resolve(__dirname, "dist")));
+    const distPath = path.resolve(__dirname, "dist");
+    app.use(express.static(distPath));
+    
+    // SPA Fallback: Serve index.html for all non-API routes
+    app.get("*", (req, res) => {
+      if (!req.path.startsWith("/api")) {
+        res.sendFile(path.join(distPath, "index.html"));
+      }
+    });
   }
 
   app.listen(PORT, "0.0.0.0", () => {

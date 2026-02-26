@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useUser } from "@clerk/clerk-react";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -20,17 +20,23 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { getToken } = useAuth();
+  const { user } = useUser();
   const [formData, setFormData] = useState({
     name: "",
     price: "",
     currency: "₺",
-    cycle: "MONTHLY",
+    cycle: "MONTHLY" as "MONTHLY" | "YEARLY",
     category: "Eğlence",
     startDate: new Date().toISOString().split("T")[0],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      setError("Kullanıcı oturumu bulunamadı.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -45,6 +51,7 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
         body: JSON.stringify({
           ...formData,
           price: parseFloat(formData.price),
+          userId: user.id, // Explicitly send userId as requested
         }),
       });
 
@@ -135,7 +142,7 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
               <select
                 className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 transition-all bg-white"
                 value={formData.cycle}
-                onChange={(e) => setFormData({ ...formData, cycle: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, cycle: e.target.value as "MONTHLY" | "YEARLY" })}
               >
                 <option value="MONTHLY">Aylık</option>
                 <option value="YEARLY">Yıllık</option>
