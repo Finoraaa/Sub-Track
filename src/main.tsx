@@ -59,8 +59,8 @@ if (!PUBLISHABLE_KEY || !isValidPublishableKey(PUBLISHABLE_KEY)) {
       <ErrorBoundary>
         <ClerkProvider 
           publishableKey={PUBLISHABLE_KEY}
-          afterSignInUrl="/"
-          afterSignUpUrl="/"
+          signInFallbackRedirectUrl="/"
+          signUpFallbackRedirectUrl="/"
         >
           <BrowserRouter>
             <App />

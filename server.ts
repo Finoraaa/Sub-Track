@@ -254,6 +254,11 @@ async function startServer() {
     res.json({ status: "ok", database: !!process.env.DATABASE_URL });
   });
 
+  // 404 Handler for API routes
+  app.use("/api", (req, res) => {
+    res.status(404).json({ success: false, error: `API rotası bulunamadı: ${req.method} ${req.path}` });
+  });
+
   // Global Error Handler for API routes
   app.use("/api", (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
     console.error("API Error:", err);
