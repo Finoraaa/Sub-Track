@@ -42,17 +42,21 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
 
     try {
       const token = await getToken();
+      const payload = {
+        ...formData,
+        price: Number(formData.price),
+        userId: user.id,
+      };
+
+      console.log("Sending subscription payload:", payload);
+
       const response = await fetch("/api/subscriptions", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...formData,
-          price: parseFloat(formData.price),
-          userId: user.id, // Explicitly send userId as requested
-        }),
+        body: JSON.stringify(payload),
       });
 
       const result = await response.json();
@@ -71,9 +75,9 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
       } else {
         setError(result.error || "Abonelik eklenirken bir hata oluştu.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding subscription:", error);
-      setError("Sunucuya bağlanırken bir hata oluştu.");
+      setError(`Sunucuya bağlanırken bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
     } finally {
       setLoading(false);
     }

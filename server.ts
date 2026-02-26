@@ -107,13 +107,23 @@ async function startServer() {
   // POST: Create Subscription
   app.post("/api/subscriptions", async (req, res) => {
     try {
-      const { userId: authUserId } = getAuth(req);
+      const auth = getAuth(req);
+      const { userId: authUserId } = auth;
       const userId = authUserId || req.body.userId;
 
       if (!userId) {
-        return res.status(401).json({ success: false, error: "Yetkisiz erişim: Kullanıcı kimliği bulunamadı." });
+        console.error("[AUTH ERROR] No userId found in request. Auth state:", {
+          hasAuthUserId: !!authUserId,
+          hasBodyUserId: !!req.body.userId,
+          sessionId: auth.sessionId
+        });
+        return res.status(401).json({ 
+          success: false, 
+          error: "Yetkisiz erişim: Kullanıcı kimliği bulunamadı. Lütfen tekrar giriş yapın." 
+        });
       }
 
+      console.log(`[SUBSCRIPTION] Creating for user: ${userId}`, req.body);
       const validatedData = SubscriptionSchema.parse(req.body);
       const nextPaymentDate = calculateNextPaymentDate(validatedData.startDate, validatedData.cycle);
 
@@ -130,13 +140,18 @@ async function startServer() {
         },
       });
 
+      console.log(`[SUBSCRIPTION] Successfully created: ${subscription.id}`);
       res.status(201).json({ success: true, data: subscription });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ success: false, error: error.issues });
+        console.error("[VALIDATION ERROR]", error.issues);
+        return res.status(400).json({ success: false, error: "Geçersiz form verisi", details: error.issues });
       }
-      console.error("POST Error:", error);
-      res.status(500).json({ success: false, error: "Abonelik oluşturulamadı" });
+      console.error("[POST Error] Full details:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Abonelik oluşturulamadı. Veritabanı bağlantısını kontrol edin." 
+      });
     }
   });
 
