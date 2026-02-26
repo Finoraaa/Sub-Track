@@ -1,4 +1,4 @@
-import { MoreVertical, Trash2, Edit2 } from "lucide-react";
+import { MoreVertical, Trash2, Edit2, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { motion } from "motion/react";
@@ -22,9 +22,23 @@ export function SubscriptionList({ subscriptions = [], loading, onDelete }: Subs
 
   if (!subscriptions || subscriptions.length === 0) {
     return (
-      <div className="mt-8 text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-        <p className="text-gray-500">Henüz abonelik eklenmemiş.</p>
-      </div>
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="mt-8 text-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-100"
+      >
+        <div className="max-w-xs mx-auto space-y-4">
+          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+            <CreditCard className="w-8 h-8 text-gray-300" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold text-gray-900">Henüz abonelik yok</h3>
+            <p className="text-sm text-gray-500">
+              Takip etmek istediğiniz abonelikleri "Yeni Abonelik" butonu ile ekleyebilirsiniz.
+            </p>
+          </div>
+        </div>
+      </motion.div>
     );
   }
 

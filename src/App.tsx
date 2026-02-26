@@ -45,12 +45,24 @@ export default function App() {
   const fetchSubscriptions = useCallback(async () => {
     try {
       const response = await fetch("/api/subscriptions");
+      
+      if (!response.ok) {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Sunucu hatası: ${response.status}`);
+        } else {
+          throw new Error(`Sunucu hatası: ${response.status}. Beklenen JSON yanıtı alınamadı.`);
+        }
+      }
+
       const result = await response.json();
       if (result.success) {
         setSubscriptions(result.data || []);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Fetch error:", error);
+      // You could add a toast notification here
     } finally {
       setLoading(false);
     }

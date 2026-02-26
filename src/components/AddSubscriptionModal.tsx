@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -16,6 +17,7 @@ interface AddSubscriptionModalProps {
 export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -28,6 +30,7 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
 
     try {
       const response = await fetch("/api/subscriptions", {
@@ -39,7 +42,9 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
         }),
       });
 
-      if (response.ok) {
+      const result = await response.json();
+
+      if (response.ok && result.success) {
         setOpen(false);
         setFormData({
           name: "",
@@ -50,9 +55,12 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
           startDate: new Date().toISOString().split("T")[0],
         });
         onSuccess();
+      } else {
+        setError(result.error || "Abonelik eklenirken bir hata oluştu.");
       }
     } catch (error) {
       console.error("Error adding subscription:", error);
+      setError("Sunucuya bağlanırken bir hata oluştu.");
     } finally {
       setLoading(false);
     }
@@ -69,8 +77,16 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Yeni Abonelik Ekle</DialogTitle>
+          <DialogDescription>
+            Yeni bir abonelik ekleyerek harcamalarınızı takip etmeye başlayın.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        {error && (
+          <div className="p-3 text-sm text-red-500 bg-red-50 rounded-xl border border-red-100">
+            {error}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Platform Adı</label>
             <input

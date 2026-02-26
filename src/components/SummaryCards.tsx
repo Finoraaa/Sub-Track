@@ -7,8 +7,10 @@ interface SummaryCardsProps {
 }
 
 export function SummaryCards({ subscriptions = [], loading }: SummaryCardsProps) {
+  const safeSubscriptions = Array.isArray(subscriptions) ? subscriptions : [];
+  
   const calculateMonthlyTotal = () => {
-    return (subscriptions || []).reduce((acc, sub) => {
+    return safeSubscriptions.reduce((acc, sub) => {
       const price = sub?.price || 0;
       if (sub?.cycle === "YEARLY") {
         return acc + price / 12;
@@ -18,7 +20,7 @@ export function SummaryCards({ subscriptions = [], loading }: SummaryCardsProps)
   };
 
   const monthlyTotal = calculateMonthlyTotal();
-  const upcomingCount = (subscriptions || []).length;
+  const upcomingCount = safeSubscriptions.length;
 
   const cards = [
     {
@@ -30,7 +32,7 @@ export function SummaryCards({ subscriptions = [], loading }: SummaryCardsProps)
     },
     {
       title: "Aktif Abonelik",
-      value: subscriptions.length.toString(),
+      value: safeSubscriptions.length.toString(),
       icon: CreditCard,
       color: "text-blue-600",
       bg: "bg-blue-50",

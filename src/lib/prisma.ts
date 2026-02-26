@@ -1,22 +1,41 @@
 import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const prismaClientSingleton = () => {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    console.error('CRITICAL: DATABASE_URL environment variable is missing.');
+    
+    // Recursive proxy to handle nested property access like prisma.user.findFirst()
+    const createErrorProxy = (path: string[] = []): any => {
+      const errorHandler = () => {
+        throw new Error(`Database connection is not configured. Please set DATABASE_URL in your environment variables. (Accessing: prisma.${path.join('.')})`);
+      };
 
-const getPrismaClient = () => {
-  if (!process.env.DATABASE_URL) {
-    console.warn('DATABASE_URL is not set. Database features will be disabled.');
-    // Return a proxy that throws descriptive errors instead of crashing the whole app
-    return new Proxy({} as PrismaClient, {
-      get: () => {
-        throw new Error('Database connection is not configured. Please set DATABASE_URL in your environment.');
-      }
-    });
+      return new Proxy(errorHandler, {
+        get: (target, prop) => {
+          if (typeof prop === 'string') {
+            return createErrorProxy([...path, prop]);
+          }
+          return target;
+        },
+        apply: (target) => {
+          return errorHandler();
+        }
+      });
+    };
+
+    return createErrorProxy() as PrismaClient;
   }
+  
   return new PrismaClient({
-    log: ['query'],
+    log: ['query', 'error', 'warn'],
   });
 };
 
-export const prisma = globalForPrisma.prisma || getPrismaClient();
+declare global {
+  var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
+}
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+export const prisma = globalThis.prisma ?? prismaClientSingleton();
+
+if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;

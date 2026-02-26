@@ -9,7 +9,10 @@ const calculateNextPaymentDate = (startDate: Date, cycle: "MONTHLY" | "YEARLY") 
   const now = new Date();
   let nextDate = new Date(startDate);
   
-  while (nextDate < now) {
+  // If start date is in the future, that's our first payment date
+  if (nextDate > now) return nextDate;
+
+  while (nextDate <= now) {
     if (cycle === "MONTHLY") {
       nextDate = addMonths(nextDate, 1);
     } else {
@@ -35,6 +38,18 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+
+  // Middleware to ensure DATABASE_URL is present for API routes
+  app.use("/api", (req, res, next) => {
+    if (!process.env.DATABASE_URL && req.path !== "/health") {
+      return res.status(500).json({
+        success: false,
+        error: "Veritabanı bağlantısı yapılandırılmamış. Lütfen DATABASE_URL değişkenini kontrol edin.",
+        code: "MISSING_DATABASE_URL"
+      });
+    }
+    next();
+  });
 
   // Helper: Get or Create Default User (Simulating Auth)
   const getDefaultUser = async () => {
@@ -192,7 +207,17 @@ async function startServer() {
   });
 
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.json({ status: "ok", database: !!process.env.DATABASE_URL });
+  });
+
+  // Global Error Handler for API routes
+  app.use("/api", (err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error("API Error:", err);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message || "Sunucu tarafında bir hata oluştu.",
+      code: err.code
+    });
   });
 
   // Vite middleware for development
