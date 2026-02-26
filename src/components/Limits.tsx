@@ -9,16 +9,25 @@ const Progress = ({ value, className }: { value: number; className?: string }) =
     className={cn("relative h-4 w-full overflow-hidden rounded-full bg-gray-100", className)}
   >
     <ProgressPrimitive.Indicator
-      className="h-full w-full flex-1 bg-emerald-500 transition-all duration-500 ease-in-out"
+      className={cn(
+        "h-full w-full flex-1 transition-all duration-500 ease-in-out",
+        value > 90 ? "bg-red-500" : value > 70 ? "bg-orange-500" : "bg-emerald-500"
+      )}
       style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
     />
   </ProgressPrimitive.Root>
 );
 
-export function Limits() {
+export function Limits({ subscriptions = [] }: { subscriptions: any[] }) {
   const [limit, setLimit] = useState(2500);
-  const currentSpending = 1840.50;
-  const percentage = (currentSpending / limit) * 100;
+  
+  const currentSpending = subscriptions.reduce((acc, sub) => {
+    const price = sub.price || 0;
+    if (sub.cycle === "YEARLY") return acc + price / 12;
+    return acc + price;
+  }, 0);
+
+  const percentage = Math.min((currentSpending / limit) * 100, 100);
 
   return (
     <motion.div

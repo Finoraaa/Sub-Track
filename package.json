@@ -12,6 +12,8 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.1",
+    "@clerk/express": "^1.7.74",
     "@google/genai": "^1.29.0",
     "@prisma/client": "^6.4.1",
     "@radix-ui/react-accordion": "^1.2.12",

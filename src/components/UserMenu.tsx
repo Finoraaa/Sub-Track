@@ -1,76 +1,30 @@
-import { 
-  User, 
-  Settings as SettingsIcon, 
-  ShieldAlert, 
-  HelpCircle, 
-  LogOut 
-} from "lucide-react";
-import { Link } from "react-router-dom";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "./ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { useUser, UserButton } from "@clerk/clerk-react";
 
 export function UserMenu() {
+  const { user } = useUser();
+
+  if (!user) return null;
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button className="outline-none">
-          <Avatar className="h-8 w-8 border border-gray-200 hover:border-gray-300 transition-colors">
-            <AvatarImage src="https://picsum.photos/seed/admin/100/100" />
-            <AvatarFallback className="text-xs font-bold text-gray-500">AU</AvatarFallback>
-          </Avatar>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 mt-2">
-        <div className="flex items-center gap-2 p-2">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src="https://picsum.photos/seed/admin/100/100" />
-            <AvatarFallback>AU</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-gray-900">Admin User</span>
-            <span className="text-xs text-gray-500">admin@finora.com</span>
-          </div>
-        </div>
-        <DropdownMenuSeparator />
-        <Link to="/settings">
-          <DropdownMenuItem className="gap-2 cursor-pointer">
-            <User className="w-4 h-4" />
-            Hesabım
-          </DropdownMenuItem>
-        </Link>
-        <Link to="/settings">
-          <DropdownMenuItem className="gap-2 cursor-pointer">
-            <SettingsIcon className="w-4 h-4" />
-            Ayarlar
-          </DropdownMenuItem>
-        </Link>
-        <Link to="/limits">
-          <DropdownMenuItem className="gap-2 cursor-pointer">
-            <ShieldAlert className="w-4 h-4" />
-            Harcama Limitleri
-          </DropdownMenuItem>
-        </Link>
-        <DropdownMenuSeparator />
-        <Link to="/help">
-          <DropdownMenuItem className="gap-2 cursor-pointer">
-            <HelpCircle className="w-4 h-4" />
-            Yardım
-          </DropdownMenuItem>
-        </Link>
-        <DropdownMenuSeparator />
-        <Link to="/logout">
-          <DropdownMenuItem className="gap-2 text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer">
-            <LogOut className="w-4 h-4" />
-            Çıkış Yap
-          </DropdownMenuItem>
-        </Link>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center gap-3">
+      <div className="hidden md:flex flex-col items-end mr-1">
+        <span className="text-sm font-semibold text-gray-900 leading-none">
+          {user.fullName || user.username || "Kullanıcı"}
+        </span>
+        <span className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider font-medium">
+          Premium Plan
+        </span>
+      </div>
+      <UserButton 
+        afterSignOutUrl="/sign-in"
+        appearance={{
+          elements: {
+            avatarBox: "h-9 w-9 border border-gray-200 hover:border-gray-300 transition-all",
+            userButtonPopoverCard: "rounded-2xl border border-gray-100 shadow-xl",
+            userButtonTrigger: "outline-none focus:ring-2 focus:ring-gray-900/10 rounded-full"
+          }
+        }}
+      />
+    </div>
   );
 }

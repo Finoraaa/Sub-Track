@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { useAuth } from "@clerk/clerk-react";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -18,6 +19,7 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { getToken } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -33,9 +35,13 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
     setError(null);
 
     try {
+      const token = await getToken();
       const response = await fetch("/api/subscriptions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           ...formData,
           price: parseFloat(formData.price),

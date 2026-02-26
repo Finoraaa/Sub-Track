@@ -1,19 +1,33 @@
-import { useState } from "react";
-import { User, Mail, Globe, Save } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User as UserIcon, Mail, Globe, Save } from "lucide-react";
+import { useUser } from "@clerk/clerk-react";
 import { Button } from "./ui/button";
 import { motion } from "motion/react";
 
 export function Settings() {
+  const { user } = useUser();
   const [formData, setFormData] = useState({
-    name: "Admin User",
-    email: "admin@finora.com",
+    name: "",
+    email: "",
     currency: "₺",
   });
 
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.fullName || "",
+        email: user.emailAddresses[0]?.emailAddress || "",
+        currency: "₺",
+      });
+    }
+  }, [user]);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    alert("Ayarlar başarıyla kaydedildi!");
+    alert("Ayarlar başarıyla kaydedildi! (Not: Profil güncellemeleri için Clerk arayüzünü kullanabilirsiniz)");
   };
+
+  if (!user) return null;
 
   return (
     <motion.div
@@ -31,7 +45,7 @@ export function Settings() {
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <User className="w-4 h-4" /> Ad Soyad
+                <UserIcon className="w-4 h-4" /> Ad Soyad
               </label>
               <input
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900/10 transition-all"

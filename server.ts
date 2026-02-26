@@ -1,5 +1,6 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
+import { clerkMiddleware, getAuth } from "@clerk/express";
 import { prisma } from "./src/lib/prisma.ts";
 import { z } from "zod";
 import { addDays, addMonths, addYears } from "date-fns";
@@ -30,39 +31,51 @@ const SubscriptionSchema = z.object({
   cycle: z.enum(["MONTHLY", "YEARLY"]),
   startDate: z.string().pipe(z.coerce.date()),
   category: z.string().min(1, "Kategori zorunludur"),
-  userId: z.string().uuid().optional(), // Opsiyonel, şimdilik default user kullanacağız
 });
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Debug: Check environment variables (do not log secret values)
+  console.log("Checking Environment Variables:");
+  console.log("- DATABASE_URL:", process.env.DATABASE_URL ? "Present" : "Missing");
+  console.log("- CLERK_PUBLISHABLE_KEY:", process.env.CLERK_PUBLISHABLE_KEY ? "Present" : "Missing");
+  console.log("- CLERK_SECRET_KEY:", process.env.CLERK_SECRET_KEY ? "Present" : "Missing");
+
   app.use(express.json());
+  
+  if (process.env.CLERK_SECRET_KEY) {
+    app.use(clerkMiddleware());
+  } else {
+    console.warn("WARNING: CLERK_SECRET_KEY is missing. Auth middleware might not function correctly.");
+  }
 
   // Middleware to ensure DATABASE_URL is present for API routes
   app.use("/api", (req, res, next) => {
     if (!process.env.DATABASE_URL && req.path !== "/health") {
       return res.status(500).json({
         success: false,
-        error: "Veritabanı bağlantısı yapılandırılmamış. Lütfen DATABASE_URL değişkenini kontrol edin.",
+        error: "Veritabanı bağlantısı yapılandırılmamış (DATABASE_URL eksik).",
         code: "MISSING_DATABASE_URL"
+      });
+    }
+    
+    if (!process.env.CLERK_SECRET_KEY && req.path !== "/health") {
+      return res.status(500).json({
+        success: false,
+        error: "Kimlik doğrulama yapılandırılmamış (CLERK_SECRET_KEY eksik).",
+        code: "MISSING_CLERK_SECRET"
       });
     }
     next();
   });
 
-  // Helper: Get or Create Default User (Simulating Auth)
-  const getDefaultUser = async () => {
-    let user = await prisma.user.findFirst();
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: "demo@example.com",
-          name: "Demo User",
-        },
-      });
-    }
-    return user;
+  // Helper: Get or Create User in our DB from Clerk Auth
+  const syncUser = async (clerkUserId: string) => {
+    // For now, we'll just return the ID to use in subscriptions
+    // In a real app, you might want to fetch user details from Clerk and save to your DB
+    return clerkUserId;
   };
 
   // --- API ROUTES ---
@@ -70,11 +83,15 @@ async function startServer() {
   // GET: All Subscriptions
   app.get("/api/subscriptions", async (req, res) => {
     try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: "Yetkisiz erişim" });
+      }
+
       const { sortBy = "createdAt", order = "desc" } = req.query;
-      const user = await getDefaultUser();
 
       const subscriptions = await prisma.subscription.findMany({
-        where: { userId: user.id },
+        where: { userId: userId },
         orderBy: {
           [sortBy as string]: order as "asc" | "desc",
         },
@@ -90,9 +107,12 @@ async function startServer() {
   // POST: Create Subscription
   app.post("/api/subscriptions", async (req, res) => {
     try {
-      const validatedData = SubscriptionSchema.parse(req.body);
-      const user = await getDefaultUser();
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: "Yetkisiz erişim" });
+      }
 
+      const validatedData = SubscriptionSchema.parse(req.body);
       const nextPaymentDate = calculateNextPaymentDate(validatedData.startDate, validatedData.cycle);
 
       const subscription = await prisma.subscription.create({
@@ -104,7 +124,7 @@ async function startServer() {
           category: validatedData.category,
           startDate: validatedData.startDate,
           nextPaymentDate,
-          user: { connect: { id: user.id } },
+          userId: userId,
         },
       });
 
@@ -121,11 +141,16 @@ async function startServer() {
   // PUT: Update Subscription
   app.put("/api/subscriptions/:id", async (req, res) => {
     try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: "Yetkisiz erişim" });
+      }
+
       const { id } = req.params;
       const validatedData = SubscriptionSchema.partial().parse(req.body);
 
       const subscription = await prisma.subscription.update({
-        where: { id },
+        where: { id, userId: userId },
         data: validatedData,
       });
 
@@ -142,9 +167,14 @@ async function startServer() {
   // DELETE: Delete Subscription
   app.delete("/api/subscriptions/:id", async (req, res) => {
     try {
+      const { userId } = getAuth(req);
+      if (!userId) {
+        return res.status(401).json({ success: false, error: "Yetkisiz erişim" });
+      }
+
       const { id } = req.params;
       await prisma.subscription.delete({
-        where: { id },
+        where: { id, userId: userId },
       });
 
       res.json({ success: true, message: "Abonelik başarıyla silindi" });
@@ -180,18 +210,15 @@ async function startServer() {
             lte: twoDaysLater,
           },
         },
-        include: {
-          user: true,
-        },
       });
 
       console.log("--- YAKLAŞAN ÖDEMELER RAPORU ---");
       upcomingPayments.forEach((sub) => {
-        console.log(`[BİLDİRİM] ${sub.user.name} (${sub.user.email}): ${sub.name} ödemesi yaklaşıyor!`);
+        console.log(`[BİLDİRİM] Kullanıcı ID: ${sub.userId}: ${sub.name} ödemesi yaklaşıyor!`);
         console.log(`Tarih: ${sub.nextPaymentDate?.toLocaleDateString("tr-TR")}, Tutar: ${sub.price} ${sub.currency}`);
         
         // TODO: Buraya Resend veya SendGrid e-posta entegrasyonu eklenecek.
-        // await sendEmail(sub.user.email, "Ödeme Hatırlatıcı", ...);
+        // Clerk API kullanılarak kullanıcının e-postası çekilebilir.
       });
       console.log("--------------------------------");
 
