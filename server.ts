@@ -83,15 +83,17 @@ async function startServer() {
   // GET: All Subscriptions
   app.get("/api/subscriptions", async (req, res) => {
     try {
-      const { userId } = getAuth(req);
+      const auth = getAuth(req);
+      const userId = auth.userId || req.query.userId;
+      
       if (!userId) {
-        return res.status(401).json({ success: false, error: "Yetkisiz erişim" });
+        return res.status(401).json({ success: false, error: "Yetkisiz erişim: Kullanıcı kimliği bulunamadı." });
       }
 
       const { sortBy = "createdAt", order = "desc" } = req.query;
 
       const subscriptions = await prisma.subscription.findMany({
-        where: { userId: userId },
+        where: { userId: String(userId) },
         orderBy: {
           [sortBy as string]: order as "asc" | "desc",
         },

@@ -71,15 +71,16 @@ function AuthPage({ children }: { children: React.ReactNode }) {
 export default function App() {
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useUser();
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const location = useLocation();
 
   const fetchSubscriptions = useCallback(async () => {
-    if (!isSignedIn) return;
+    if (!isSignedIn || !user) return;
     
     try {
       const token = await getToken();
-      const response = await fetch("/api/subscriptions", {
+      const response = await fetch(`/api/subscriptions?userId=${user.id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
