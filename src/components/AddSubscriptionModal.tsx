@@ -43,12 +43,16 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
     try {
       const token = await getToken();
       const payload = {
-        ...formData,
+        name: formData.name,
         price: Number(formData.price),
+        currency: formData.currency,
+        cycle: formData.cycle,
+        category: formData.category,
+        startDate: formData.startDate,
         userId: user.id,
       };
 
-      console.log("Sending subscription payload:", payload);
+      console.log("Abonelik kaydediliyor:", payload);
 
       const response = await fetch("/api/subscriptions", {
         method: "POST",
@@ -59,16 +63,15 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
         body: JSON.stringify(payload),
       });
 
+      // Yanıtın JSON olup olmadığını kontrol et
       const contentType = response.headers.get("content-type");
-      let result;
-      
-      if (contentType && contentType.includes("application/json")) {
-        result = await response.json();
-      } else {
-        const text = await response.text();
-        console.error("Non-JSON response received:", text);
-        throw new Error(`Sunucu hatası (${response.status}): Beklenen JSON yanıtı alınamadı.`);
+      if (!contentType || !contentType.includes("application/json")) {
+        const errorText = await response.text();
+        console.error("Sunucudan beklenmedik yanıt (JSON değil):", errorText);
+        throw new Error(`Sunucu hatası (${response.status}): Sunucu JSON yerine HTML veya boş bir yanıt döndürdü. Lütfen Vercel Logs kısmını kontrol edin.`);
       }
+
+      const result = await response.json();
 
       if (response.ok && result.success) {
         setOpen(false);
@@ -85,8 +88,8 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
         setError(result.error || "Abonelik eklenirken bir hata oluştu.");
       }
     } catch (error: any) {
-      console.error("Error adding subscription:", error);
-      setError(`Sunucuya bağlanırken bir hata oluştu: ${error.message || 'Bilinmeyen hata'}`);
+      console.error("Kayıt hatası:", error);
+      setError(error.message || "Sunucuya bağlanırken bir hata oluştu.");
     } finally {
       setLoading(false);
     }
