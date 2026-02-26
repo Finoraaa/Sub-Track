@@ -17,7 +17,7 @@ enum Cycle {
 
 model Subscription {
   id              String    @id @default(uuid())
-  userId          String
+  userId          String    // Clerk User ID
   name            String
   price           Float
   currency        String
@@ -27,4 +27,6 @@ model Subscription {
   nextPaymentDate DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
 }

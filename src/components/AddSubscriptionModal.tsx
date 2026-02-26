@@ -32,8 +32,10 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!user) {
-      setError("Kullanıcı oturumu bulunamadı.");
+      setError("Lütfen giriş yapın. Abonelik eklemek için oturum açmanız gerekmektedir.");
+      console.error("Auth Error: User object is null");
       return;
     }
 
@@ -42,6 +44,10 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
 
     try {
       const token = await getToken();
+      if (!token) {
+        throw new Error("Oturum anahtarı (token) alınamadı. Lütfen sayfayı yenileyip tekrar deneyin.");
+      }
+
       const payload = {
         name: formData.name,
         price: Number(formData.price),
@@ -52,7 +58,7 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
         userId: user.id,
       };
 
-      console.log("Abonelik kaydediliyor:", payload);
+      console.log("Abonelik kaydediliyor (Payload):", JSON.stringify(payload, null, 2));
 
       const response = await fetch("/api/subscriptions", {
         method: "POST",
@@ -63,15 +69,16 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
         body: JSON.stringify(payload),
       });
 
-      // Yanıtın JSON olup olmadığını kontrol et
       const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
+      let result;
+      
+      if (contentType && contentType.includes("application/json")) {
+        result = await response.json();
+      } else {
         const errorText = await response.text();
         console.error("Sunucudan beklenmedik yanıt (JSON değil):", errorText);
-        throw new Error(`Sunucu hatası (${response.status}): Sunucu JSON yerine HTML veya boş bir yanıt döndürdü. Lütfen Vercel Logs kısmını kontrol edin.`);
+        throw new Error(`Sunucu hatası (${response.status}): Sunucu JSON yerine farklı bir yanıt döndürdü. Veritabanı tablosu (Subscription) mevcut olmayabilir.`);
       }
-
-      const result = await response.json();
 
       if (response.ok && result.success) {
         setOpen(false);
@@ -85,11 +92,14 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
         });
         onSuccess();
       } else {
-        setError(result.error || "Abonelik eklenirken bir hata oluştu.");
+        const errorMsg = result.error || "Abonelik eklenirken bir hata oluştu.";
+        setError(errorMsg);
+        console.error("Abonelik ekleme hatası (API):", errorMsg);
       }
     } catch (error: any) {
-      console.error("Kayıt hatası:", error);
-      setError(error.message || "Sunucuya bağlanırken bir hata oluştu.");
+      const detailedError = error.message || "Bilinmeyen bir hata oluştu.";
+      console.error("Kayıt işlemi sırasında teknik hata:", detailedError);
+      setError(`Kayıt başarısız: ${detailedError}`);
     } finally {
       setLoading(false);
     }
