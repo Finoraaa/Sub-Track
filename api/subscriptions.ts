@@ -1,10 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { addMonths, addYears } from "date-fns";
-
-// Use a global prisma client to prevent too many connections in serverless
-const prisma = (global as any).prisma || new PrismaClient();
-if (process.env.NODE_ENV !== "production") (global as any).prisma = prisma;
+import { prisma } from "../src/lib/prisma";
 
 const calculateNextPaymentDate = (startDate: Date, cycle: "MONTHLY" | "YEARLY") => {
   const now = new Date();
@@ -27,8 +23,19 @@ const SubscriptionSchema = z.object({
   userId: z.string(),
 });
 
+const parseBody = (body: unknown) => {
+  if (!body) return {};
+  if (typeof body === "string") {
+    try {
+      return JSON.parse(body);
+    } catch {
+      return {};
+    }
+  }
+  return body;
+};
+
 export default async function handler(req: any, res: any) {
-  // Ensure we always return JSON
   res.setHeader("Content-Type", "application/json");
 
   if (req.method === "GET") {
@@ -52,7 +59,8 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === "POST") {
     try {
-      const validatedData = SubscriptionSchema.parse(req.body);
+      const body = parseBody(req.body);
+      const validatedData = SubscriptionSchema.parse(body);
       const nextPaymentDate = calculateNextPaymentDate(validatedData.startDate, validatedData.cycle);
 
       const sub = await prisma.subscription.create({
@@ -78,7 +86,6 @@ export default async function handler(req: any, res: any) {
     }
   }
 
-  // Handle 405 Method Not Allowed
   res.setHeader("Allow", ["GET", "POST"]);
   return res.status(405).json({ success: false, error: `Method ${req.method} Not Allowed` });
 }
