@@ -76,14 +76,17 @@ export default function App() {
   const location = useLocation();
 
   const fetchSubscriptions = useCallback(async () => {
-    if (!isSignedIn || !user) return;
+    if (!isSignedIn || !user?.id) return;
     
     try {
       const token = await getToken();
-      const response = await fetch(`/api/subscriptions?userId=${user.id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/subscriptions?userId=${encodeURIComponent(user.id)}`, {
+        headers,
       });
       
       if (!response.ok) {
@@ -105,18 +108,21 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn, getToken]);
+  }, [isSignedIn, getToken, user?.id]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Bu aboneliği silmek istediğinize emin misiniz?")) return;
     
     try {
       const token = await getToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
       const response = await fetch(`/api/subscriptions/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers,
       });
       if (response.ok) {
         await fetchSubscriptions();
