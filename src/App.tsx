@@ -80,10 +80,13 @@ export default function App() {
     
     try {
       const token = await getToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
       const response = await fetch(`/api/subscriptions?userId=${encodeURIComponent(user.id)}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers,
       });
       
       if (!response.ok) {
@@ -112,11 +115,14 @@ export default function App() {
     
     try {
       const token = await getToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
       const response = await fetch(`/api/subscriptions/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers,
       });
       if (response.ok) {
         await fetchSubscriptions();

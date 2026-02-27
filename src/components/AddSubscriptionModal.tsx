@@ -44,9 +44,6 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
 
     try {
       const token = await getToken();
-      if (!token) {
-        throw new Error("Oturum anahtarı (token) alınamadı. Lütfen sayfayı yenileyip tekrar deneyin.");
-      }
 
       const payload = {
         name: formData.name,
@@ -60,12 +57,16 @@ export function AddSubscriptionModal({ onSuccess }: AddSubscriptionModalProps) {
 
       console.log("Abonelik kaydediliyor (Payload):", JSON.stringify(payload, null, 2));
 
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
       const response = await fetch("/api/subscriptions", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
+        headers,
         body: JSON.stringify(payload),
       });
 
